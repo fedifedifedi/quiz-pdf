@@ -72,6 +72,30 @@ describe("generateCards", () => {
     expect((await getCards(alice.id, doc.id)).map((c) => c.excerpt)).toEqual(SENTENCES);
   });
 
+  test("2 cartes avec le même extrait : la seconde est refusée comme doublon et redemandée", async () => {
+    const { alice, doc } = await setup();
+    gemini
+      .mockResolvedValueOnce(cardsJson([...SENTENCES.slice(0, 4), SENTENCES[0]]))
+      .mockResolvedValueOnce(cardsJson([SENTENCES[4]]));
+
+    expect(await generateCards(alice.id, doc.id, 5, () => {})).toEqual({ count: 5, requested: 5 });
+    expect(requestedAt(1)).toBe(1);
+    expect(gemini.mock.calls[1][0]).toContain(`doublon : même extrait qu'une autre carte : « ${SENTENCES[0]} »`);
+    expect((await getCards(alice.id, doc.id)).map((c) => c.excerpt)).toEqual(SENTENCES.slice(0, 5));
+  });
+
+  test("refuse aussi un doublon d'une carte retenue lors d'un appel précédent", async () => {
+    const { alice, doc } = await setup();
+    gemini
+      .mockResolvedValueOnce(cardsJson([...SENTENCES.slice(0, 4), INVENTED]))
+      .mockResolvedValueOnce(cardsJson([SENTENCES[0]]))
+      .mockResolvedValueOnce(cardsJson([SENTENCES[4]]));
+
+    expect(await generateCards(alice.id, doc.id, 5, () => {})).toEqual({ count: 5, requested: 5 });
+    expect(gemini).toHaveBeenCalledTimes(3);
+    expect((await getCards(alice.id, doc.id)).map((c) => c.excerpt)).toEqual(SENTENCES.slice(0, 5));
+  });
+
   test("enregistre les cartes valides si certaines manquent encore après 2 relances", async () => {
     const { alice, doc } = await setup();
     gemini

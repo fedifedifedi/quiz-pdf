@@ -32,7 +32,11 @@ export async function generateCards(
     const raw = await callGemini(buildPrompt(text, missing, retry), cardsJsonSchema(missing));
 
     onStep("verification");
-    const result = validateCards(raw, text);
+    const result = validateCards(
+      raw,
+      text,
+      cards.map((c) => c.excerpt),
+    );
     rejected = "error" in result ? [result.error] : result.rejected;
     if ("cards" in result) cards.push(...result.cards.slice(0, missing));
     for (const reason of rejected) console.warn(`Carte refusée (appel ${attempt + 1}) : ${reason}`);

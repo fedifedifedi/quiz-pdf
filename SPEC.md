@@ -47,7 +47,8 @@ obtient un score enregistré dans son historique.
   - chaque champ est une chaîne non vide ;
   - chaque `excerpt` (≥ 20 caractères) **existe dans le texte envoyé**, après normalisation
     (casse, espaces, césures, guillemets/tirets typographiques) ;
-  - l'`excerpt` n'est pas un titre ou sous-titre (ligne isolée sans ponctuation finale).
+  - l'`excerpt` n'est pas un titre ou sous-titre (ligne isolée sans ponctuation finale) ;
+  - l'`excerpt` (normalisé) n'est pas identique à celui d'une carte déjà retenue (doublon).
 - Les cartes valides sont gardées ; seules les cartes manquantes sont redemandées à Gemini,
   avec la raison des refus, **au plus 2 relances**. Jamais plus de cartes que demandé.
 - Chaque refus est journalisé côté serveur avec l'extrait (tronqué à 100 caractères).

@@ -88,6 +88,11 @@ en 4 s, toutes fidèles au PDF, extraits sources corrects. Trois défauts relev�
     « introuvable ». Les « extrait introuvable » viennent donc très probablement de reformulations
     de Gemini, pas de la normalisation ; le nouveau journal permet de le confirmer ;
   - test ajouté : 10 cartes dont 1 invalide → une seule carte redemandée.
+- **Doublons, révélés par mon test réel à 30 cartes** : 30 cartes justes, mais 3 paires de cartes
+  citaient exactement le même extrait (Minkowski et l'espace-temps, LIGO le 14 septembre 2015, vitesse
+  de la lumière à 299 792 458 m/s). Correction simple, sans algorithme de similarité : une carte dont
+  l'extrait normalisé est identique à celui d'une carte déjà retenue est refusée comme doublon et
+  redemandée par la relance ciblée ; le prompt demande une notion différente par carte. Tests ajoutés.
 - Qualité pédagogique : les cartes venaient surtout du début du document et portaient sur des anecdotes
   (dates, noms). Le prompt demande maintenant des cartes réparties sur tout le document, centrées sur
   les notions clés et leurs explications, avec des réponses complètes (le résultat d'une expérience,

@@ -42,6 +42,18 @@ describe("validateCards", () => {
     expect(result).toEqual({ cards: [], rejected: [`${NOT_FOUND} : « ${long.trim().slice(0, 100)} »`] });
   });
 
+  test("refuse un doublon : même extrait (normalisé) qu'une carte de l'appel ou déjà retenue", () => {
+    const sameExcerpt = { question: "Autre question ?", answer: "R", excerpt: "la mitochondrie est l’organite  qui produit l'énergie" };
+    expect(validateCards(json([VALID[0], sameExcerpt]), SOURCE)).toEqual({
+      cards: [VALID[0]],
+      rejected: [`doublon : même extrait qu'une autre carte : « ${sameExcerpt.excerpt} »`],
+    });
+    expect(validateCards(json([VALID[0], VALID[1]]), SOURCE, [VALID[0].excerpt])).toEqual({
+      cards: [VALID[1]],
+      rejected: [`doublon : même extrait qu'une autre carte : « ${VALID[0].excerpt} »`],
+    });
+  });
+
   test("refuse un JSON invalide ou sans tableau cards", () => {
     expect(validateCards("pas du json", SOURCE)).toEqual({ error: "réponse JSON invalide" });
     expect(validateCards("{}", SOURCE)).toEqual({ error: "champ cards manquant" });

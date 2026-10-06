@@ -35,6 +35,7 @@ export function buildPrompt(text: string, count: number, retry?: Retry) {
 Règles :
 - Produis exactement ${count} carte(s), réparties sur l'ensemble du document (début, milieu et fin).
 - Privilégie les notions clés et leurs explications plutôt que les détails anecdotiques (dates, noms).
+- Une notion différente par carte : jamais deux cartes sur le même passage.
 - N'utilise que le document : n'invente rien, n'ajoute aucune connaissance extérieure.
 - "question" : une question précise.
 - "answer" : une réponse complète mais concise ; pour une expérience, donne son résultat, pas seulement sa méthode.
@@ -80,9 +81,11 @@ export function normalize(text: string) {
 
 // Vérifie chaque carte séparément : les cartes valides sont gardées, chaque refus est expliqué
 // (avec l'extrait tronqué) pour le journal et pour la relance. Le nombre est géré par l'appelant.
+// keptExcerpts : extraits des cartes déjà retenues (appels précédents), pour refuser les doublons.
 export function validateCards(
   raw: string,
   sourceText: string,
+  keptExcerpts: string[] = [],
 ): { cards: Card[]; rejected: string[] } | { error: string } {
   let data: unknown;
   try {
@@ -111,6 +114,7 @@ export function validateCards(
 
   const cards: Card[] = [];
   const rejected: string[] = [];
+  const usedExcerpts = new Set(keptExcerpts.map(normalize));
   for (const item of items) {
     const { question, answer, excerpt } = (item ?? {}) as Record<string, unknown>;
     if (![question, answer, excerpt].every((v) => typeof v === "string" && v.trim())) {
@@ -122,9 +126,15 @@ export function validateCards(
       answer: (answer as string).trim(),
       excerpt: (excerpt as string).trim(),
     };
-    const reason = rejectionReason(card.excerpt);
-    if (reason) rejected.push(`${reason} : « ${card.excerpt.slice(0, 100)} »`);
-    else cards.push(card);
+    const reason =
+      rejectionReason(card.excerpt) ??
+      (usedExcerpts.has(normalize(card.excerpt)) ? "doublon : même extrait qu'une autre carte" : null);
+    if (reason) {
+      rejected.push(`${reason} : « ${card.excerpt.slice(0, 100)} »`);
+    } else {
+      usedExcerpts.add(normalize(card.excerpt));
+      cards.push(card);
+    }
   }
   return { cards, rejected };
 }
