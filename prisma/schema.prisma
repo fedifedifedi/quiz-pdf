@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String          @id @default(cuid())
+  email        String          @unique
+  passwordHash String
+  createdAt    DateTime        @default(now())
+  sessions     Session[]
+  documents    Document[]
+  reviews      ReviewSession[]
+}
+
+// id = SHA-256 du jeton stocké dans le cookie (le jeton brut n'est jamais en base)
+model Session {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+
+  @@index([userId])
+}
+
+model Document {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  file      Bytes
+  text      String
+  createdAt DateTime        @default(now())
+  cards     Card[]
+  reviews   ReviewSession[]
+
+  @@index([userId])
+}
+
+model Card {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  position   Int
+  question   String
+  answer     String
+  excerpt    String
+
+  @@index([documentId])
+}
+
+model ReviewSession {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  correct    Int
+  total      Int
+  score      Int
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}

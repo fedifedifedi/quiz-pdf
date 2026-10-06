@@ -1,3 +1,5 @@
+@AGENTS.md
+
 # CLAUDE.md
 
 Générateur de cartes de révision à partir d'un PDF (voir `SPEC.md` pour le besoin et les critères d'acceptation).
