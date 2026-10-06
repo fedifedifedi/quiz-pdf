@@ -24,7 +24,7 @@ Règles :
 - Produis exactement ${count} cartes.
 - Chaque carte porte sur une information présente dans le document, sans rien inventer ni ajouter de connaissances extérieures.
 - "question" : une question précise ; "answer" : la réponse, courte.
-- "excerpt" : un passage COPIÉ MOT POUR MOT du document (une ou deux phrases) qui justifie la réponse. Ne le reformule pas, ne le traduis pas.
+- "excerpt" : un passage COPIÉ MOT POUR MOT du corps du texte (une ou deux phrases complètes) qui justifie la réponse. Ne le reformule pas, ne le traduis pas. Ne cite pas un titre, un intertitre, le sommaire ou une légende.
 - Rédige les questions et réponses dans la langue du document.
 
 Document :
@@ -53,19 +53,15 @@ export function cardsJsonSchema(count: number) {
   };
 }
 
-// Rend la comparaison insensible à la casse, aux espaces, aux césures de fin de ligne,
-// aux guillemets et aux tirets (le texte extrait d'un PDF en est plein). Les tirets sont
-// retirés des deux côtés : « photo-⏎synthèse » ↔ « photosynthèse », « anti-⏎inflammatoire »
-// ↔ « anti-inflammatoire ».
+// Le texte extrait d'un PDF est bruité : titres aux lettres espacées (« L ' E X P É R I E N C E »),
+// mots coupés en fin de ligne (« années-⏎lumière »), guillemets et tirets typographiques.
+// On compare donc sans casse, sans espaces, sans tirets ni guillemets, des deux côtés.
+// Un extrait faisant au moins MIN_EXCERPT_CHARS caractères, le risque de faux positif est négligeable.
 export function normalize(text: string) {
   return text
     .normalize("NFKC")
     .toLowerCase()
-    .replace(/­/g, "")
-    .replace(/[-‐‑‒–—]\s*\n\s*/g, "")
-    .replace(/[-‐‑‒–—"'`«»“”‘’]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+    .replace(/[\s­\-‐‑‒–—"'`«»“”‘’]/g, "");
 }
 
 export function validateCards(

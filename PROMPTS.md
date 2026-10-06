@@ -14,8 +14,42 @@
    Ajouts : stocker aussi le fichier PDF en base (`Bytes`, avec la limite de taille) ;
    CI GitHub Actions minimale (lint, typecheck, tests) dès la PR 1.
    Puis : commit initial et enchaînement des PR 1 à 4.
+3. Relecture exigeante de chaque PR (sécurité, isolation par `userId`, code mort, complexité),
+   publiée en commentaire, correction des bloquants, merge une fois la CI verte.
+   Corrections de `validateCards` d'après le texte réel extrait de mon PDF de test.
+   PR 5 (Gemini) : clé jamais affichée ni copiée ; script qui vérifie la clé et liste les modèles
+   en un seul appel ; je choisis moi-même `GEMINI_MODEL` ; mock uniquement dans les tests (budget 5 à 10 €).
+
+## Mes tests manuels (navigateur Chrome, `npm run dev`, console F12)
+
+Après les PR 1 à 4, tout est OK :
+- inscription, connexion, déconnexion ;
+- console du navigateur sans erreur ;
+- upload d'un vrai PDF (`cours-relativite.pdf`, 27 061 caractères extraits), texte affiché ;
+- faux PDF (`.txt` renommé en `.pdf`) : message clair ;
+- URL d'un document sans session : redirection vers `/login` ;
+- mauvais mot de passe : message clair ;
+- second utilisateur sur l'URL du document du premier : 404, et sa liste est vide.
+
+## Relecture des PR 1 à 4 (commentaires publiés sur chaque PR)
+
+- Aucun bloquant de sécurité ni d'isolation : toutes les requêtes sur les documents sont filtrées par
+  `userId`, la 404 ne révèle pas l'existence d'un document, `requireUser()` est appelé dans chaque page
+  et action.
+- Corrigé en cours de route : un test dépendant de l'ordre d'exécution (`db.test.ts`), supprimé.
+- Non bloquants, acceptés et documentés : limite de 72 octets de bcrypt, possibilité de savoir si un email
+  a un compte (inhérent au formulaire d'inscription), pas de limite de tentatives de connexion (app
+  locale), `pdf.destroy()` absent, limite de 10 Mo dupliquée côté client (évite d'embarquer `unpdf`
+  dans le navigateur), cartes en double non détectées.
+- Incident de merge : en supprimant la branche de la PR 1 après son merge, GitHub a fermé la PR 2
+  empilée dessus. L'agent a recréé la branche, rouvert la PR 2 et l'a rebasée sur `main`. Pour les
+  suivantes, il a repassé la PR suivante sur `main` **avant** chaque merge.
 
 ## Ce que j'ai corrigé moi-même
 
 - Ordre d'enregistrement du document (voir consigne 2).
 - Signalement de la troncature dans l'interface (voir consigne 2).
+- Vérification des extraits sur du texte réel : j'ai repéré dans le texte extrait de mon PDF des titres
+  aux lettres espacées et des mots coupés en fin de ligne, et demandé de les tolérer, ainsi que de
+  demander à Gemini des extraits du corps du texte plutôt que des titres. Résultat : la comparaison se
+  fait désormais sans espaces, tirets ni guillemets, avec des tests sur les extraits réels.
