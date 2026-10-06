@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { MAX_TEXT_CHARS } from "@/lib/cards";
@@ -35,7 +36,15 @@ export default async function DocumentPage({ params }: PageProps<"/documents/[id
 
       {cards.length > 0 && (
         <section>
-          <h2 className="text-lg font-semibold">{cards.length} cartes</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">{cards.length} cartes</h2>
+            <Link
+              href={`/documents/${document.id}/review`}
+              className="rounded bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700"
+            >
+              Réviser ces cartes
+            </Link>
+          </div>
           {/* Numérotation par la liste elle-même (une seule source de numéros). */}
           <ol className="mt-3 list-decimal space-y-3 pl-6 marker:font-medium marker:text-slate-500">
             {cards.map((card) => (

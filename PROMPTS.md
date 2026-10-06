@@ -22,6 +22,9 @@
    (budget 5 à 10 €).
 4. Après mon test réel de génération : corrections de la PR #6 avant merge (voir ci-dessous), puis
    merge de la PR #5. Je reteste avant le merge de la PR #6.
+5. Après mes tests réels à 10 et 30 cartes : correction des doublons, merge de la PR #6, puis PR
+   suivante : séance de révision (une carte à la fois, retourner, Bon/Faux), score final en
+   pourcentage recalculé côté serveur, historique des séances.
 
 ## Mes tests manuels (navigateur Chrome, `npm run dev`, console F12)
 

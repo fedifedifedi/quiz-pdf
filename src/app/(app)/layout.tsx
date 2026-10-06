@@ -12,6 +12,9 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <Link href="/" className="font-semibold">
             Quiz PDF
           </Link>
+          <Link href="/history" className="text-sm text-slate-600 hover:text-slate-900">
+            Historique
+          </Link>
           <span className="ml-auto text-sm text-slate-500">{user.email}</span>
           <form action={logout}>
             <button className="text-sm text-slate-600 hover:text-slate-900">Déconnexion</button>
