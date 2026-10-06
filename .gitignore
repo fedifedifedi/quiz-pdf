@@ -1,0 +1,19 @@
+# dépendances / build
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+next-env.d.ts
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# base SQLite locale
+*.db
+*.db-journal
+
+# divers
+.DS_Store
+coverage/
