@@ -2,7 +2,7 @@ import { getUser } from "@/lib/auth";
 import { parseCardCount } from "@/lib/cards";
 import { generateCards } from "@/lib/generation";
 
-// Réponse en flux NDJSON : une ligne JSON par étape ({ step }), puis { done } ou { error }.
+// Réponse en flux NDJSON : une ligne JSON par étape ({ step }), puis { done, requested } ou { error }.
 export async function POST(request: Request) {
   const user = await getUser();
   if (!user) return Response.json({ error: "Session expirée, reconnectez-vous." }, { status: 401 });
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
       const send = (event: object) => controller.enqueue(encoder.encode(JSON.stringify(event) + "\n"));
       try {
         const result = await generateCards(user.id, body.documentId, count, (step) => send({ step }));
-        send("error" in result ? result : { done: result.count });
+        send("error" in result ? result : { done: result.count, requested: result.requested });
       } catch (error) {
         // Message seul (jamais la requête ni ses en-têtes, qui contiennent la clé).
         console.error("Échec de l'appel à Gemini :", error instanceof Error ? error.message : error);

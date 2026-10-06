@@ -12,40 +12,39 @@ const VALID = [
   card("La mitochondrie est l'organite qui produit l'énergie"),
   card("La photosynthèse a lieu dans les chloroplastes"),
 ];
+const NOT_FOUND = "extrait introuvable dans le document (pas copié mot pour mot)";
+const TITLE = "l'extrait est un titre, pas une phrase du texte";
 
 describe("validateCards", () => {
   test("accepte des cartes dont les extraits sont dans le texte", () => {
-    const result = validateCards(json(VALID), SOURCE, 2);
-    expect(result).toEqual({ cards: VALID });
+    expect(validateCards(json(VALID), SOURCE)).toEqual({ cards: VALID, rejected: [] });
   });
 
-  test("refuse un nombre de cartes différent de celui demandé", () => {
-    expect(validateCards(json(VALID), SOURCE, 3)).toEqual({ error: "2 cartes reçues au lieu de 3" });
-  });
-
-  test("refuse un extrait absent du texte (carte inventée)", () => {
-    const cards = [VALID[0], card("La mitochondrie possède son propre noyau cellulaire")];
-    expect(validateCards(json(cards), SOURCE, 2)).toEqual({
-      error: "carte 2 : extrait introuvable dans le document",
+  test("garde les cartes valides et explique le refus des autres", () => {
+    const invented = card("La mitochondrie possède son propre noyau cellulaire");
+    expect(validateCards(json([VALID[0], invented, VALID[1]]), SOURCE)).toEqual({
+      cards: VALID,
+      rejected: [`${NOT_FOUND} : « La mitochondrie possède son propre noyau cellulaire »`],
     });
   });
 
-  test("refuse un extrait trop court", () => {
-    expect(validateCards(json([card("ATP")]), SOURCE, 1)).toEqual({
-      error: "carte 1 : extrait trop court",
+  test("refuse un extrait trop court ou un champ vide", () => {
+    const emptyAnswer = { question: "Q ?", answer: " ", excerpt: VALID[0].excerpt };
+    expect(validateCards(json([card("ATP"), emptyAnswer]), SOURCE)).toEqual({
+      cards: [],
+      rejected: ["extrait trop court : « ATP »", "champ manquant ou vide"],
     });
   });
 
-  test("refuse un champ manquant ou vide", () => {
-    const cards = [{ question: "Q ?", answer: " ", excerpt: VALID[0].excerpt }];
-    expect(validateCards(json(cards), SOURCE, 1)).toEqual({
-      error: "carte 1 : champ manquant ou vide",
-    });
+  test("tronque l'extrait refusé à 100 caractères dans le message", () => {
+    const long = "Cet extrait inventé est très long. ".repeat(10);
+    const result = validateCards(json([card(long)]), SOURCE);
+    expect(result).toEqual({ cards: [], rejected: [`${NOT_FOUND} : « ${long.trim().slice(0, 100)} »`] });
   });
 
   test("refuse un JSON invalide ou sans tableau cards", () => {
-    expect(validateCards("pas du json", SOURCE, 1)).toEqual({ error: "réponse JSON invalide" });
-    expect(validateCards("{}", SOURCE, 1)).toEqual({ error: "champ cards manquant" });
+    expect(validateCards("pas du json", SOURCE)).toEqual({ error: "réponse JSON invalide" });
+    expect(validateCards("{}", SOURCE)).toEqual({ error: "champ cards manquant" });
   });
 });
 
@@ -66,23 +65,27 @@ describe("validateCards sur du texte réel extrait d'un PDF", () => {
     ["mot composé coupé en fin de ligne", "quelqu'un qui vit au rez-de-chaussée vieillit un tout petit peu"],
     ["« années-lumière » coupé en fin de ligne", "à environ 1,3 milliard d'années-lumière, qui forment un seul trou noir"],
     ["phrase qui suit un sous-titre", "Au moment où son milieu est en face de vous, deux éclairs frappent ses deux extrémités."],
+    // Phrase coupée par un retour à la ligne du PDF : ce n'est pas un titre.
+    ["phrase sur deux lignes, sans point final", "Au moment où son milieu est en face de vous, deux éclairs frappent ses deux extrémités"],
   ])("accepte un extrait fidèle : %s", (_, excerpt) => {
-    expect(validateCards(json([card(excerpt)]), REAL_SOURCE, 1)).toEqual({ cards: [card(excerpt)] });
+    expect(validateCards(json([card(excerpt)]), REAL_SOURCE)).toEqual({ cards: [card(excerpt)], rejected: [] });
   });
 
   test.each([
     ["sous-titre", "La simultanéité est relative"],
     ["titre aux lettres espacées", "L'expérience de Michelson et Morley (1887)"],
   ])("refuse un extrait qui est un titre : %s", (_, excerpt) => {
-    expect(validateCards(json([card(excerpt)]), REAL_SOURCE, 1)).toEqual({
-      error: "carte 1 : l'extrait est un titre, pas une phrase du texte",
+    expect(validateCards(json([card(excerpt)]), REAL_SOURCE)).toEqual({
+      cards: [],
+      rejected: [`${TITLE} : « ${excerpt} »`],
     });
   });
 
   test("refuse toujours un extrait modifié", () => {
     const excerpt = "quelqu'un qui vit au rez-de-chaussée vieillit beaucoup plus vite";
-    expect(validateCards(json([card(excerpt)]), REAL_SOURCE, 1)).toEqual({
-      error: "carte 1 : extrait introuvable dans le document",
+    expect(validateCards(json([card(excerpt)]), REAL_SOURCE)).toEqual({
+      cards: [],
+      rejected: [`${NOT_FOUND} : « ${excerpt} »`],
     });
   });
 });

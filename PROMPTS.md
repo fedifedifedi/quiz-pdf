@@ -73,6 +73,21 @@ en 4 s, toutes fidèles au PDF, extraits sources corrects. Trois défauts relev�
   qui contient la réponse », et le serveur refuse un extrait identique à une ligne du texte sans
   ponctuation finale (titre ou sous-titre). Rejouée sur mes 10 cartes réelles, la règle refuse
   exactement les cartes 2 et 3 et accepte les 8 autres.
+- **Fragilité du tout-ou-rien, révélée par mon test réel** : la génération de 10 cartes échouait
+  souvent après 2 tentatives alors qu'à chaque fois **une seule carte sur 10** était refusée
+  (« extrait introuvable » ou « titre ») et que les 9 autres étaient jetées. Ce serait pire à 30
+  cartes. Corrections demandées :
+  - garder les cartes valides et ne redemander à Gemini que les cartes manquantes, avec la raison
+    du refus, au plus 2 relances ;
+  - s'il en manque encore : enregistrer les cartes valides et afficher « X cartes générées sur Y
+    demandées » ;
+  - journaliser le texte de l'extrait refusé (tronqué à 100 caractères) pour distinguer une
+    reformulation de Gemini d'un problème de normalisation ;
+  - vérifier l'absence de faux positifs de la règle « titre ». Rejouée sur les 262 phrases réelles
+    du PDF : 0 refusée comme titre (avec ou sans point final), et 0 phrase recopiée du texte jugée
+    « introuvable ». Les « extrait introuvable » viennent donc très probablement de reformulations
+    de Gemini, pas de la normalisation ; le nouveau journal permet de le confirmer ;
+  - test ajouté : 10 cartes dont 1 invalide → une seule carte redemandée.
 - Qualité pédagogique : les cartes venaient surtout du début du document et portaient sur des anecdotes
   (dates, noms). Le prompt demande maintenant des cartes réparties sur tout le document, centrées sur
   les notions clés et leurs explications, avec des réponses complètes (le résultat d'une expérience,

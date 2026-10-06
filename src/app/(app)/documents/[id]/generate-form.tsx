@@ -10,16 +10,17 @@ const STEPS: { id: Step; label: string }[] = [
   { id: "verification", label: "Vérification des extraits" },
 ];
 
-type Event = { step: Step } | { done: number } | { error: string };
+type Result = { done: number; requested: number };
+type Event = { step: Step } | Result | { error: string };
 
 export function GenerateForm({ documentId, hasCards }: { documentId: string; hasCards: boolean }) {
   const router = useRouter();
   const [step, setStep] = useState<Step | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
-  // Nombre de cartes générées : les étapes restent affichées (toutes cochées) après la fin,
+  // Résultat final : les étapes restent affichées (toutes cochées) après la fin,
   // pour que chacune soit lisible même quand elle ne dure que quelques millisecondes.
-  const [generated, setGenerated] = useState<number | null>(null);
+  const [generated, setGenerated] = useState<Result | null>(null);
 
   async function generate(formData: FormData) {
     setRunning(true);
@@ -51,7 +52,7 @@ export function GenerateForm({ documentId, hasCards }: { documentId: string; has
           if ("step" in event) setStep(event.step);
           else if ("error" in event) setError(event.error);
           else {
-            setGenerated(event.done);
+            setGenerated(event);
             router.refresh();
           }
         }
@@ -120,11 +121,17 @@ export function GenerateForm({ documentId, hasCards }: { documentId: string; has
           })}
         </ol>
       )}
-      {generated !== null && (
-        <p className="mt-3 text-sm font-medium text-green-700">
-          {generated} cartes générées, extraits vérifiés dans le document.
-        </p>
-      )}
+      {generated &&
+        (generated.done === generated.requested ? (
+          <p className="mt-3 text-sm font-medium text-green-700">
+            {generated.done} cartes générées, extraits vérifiés dans le document.
+          </p>
+        ) : (
+          <p className="mt-3 text-sm font-medium text-amber-700">
+            {generated.done} cartes générées sur {generated.requested} demandées : les autres n&apos;ont pas pu
+            être vérifiées dans le document. Vous pouvez relancer la génération.
+          </p>
+        ))}
       {error && (
         <p role="alert" className="mt-3 text-sm text-red-600">
           {error}

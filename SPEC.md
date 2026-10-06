@@ -43,15 +43,17 @@ obtient un score enregistré dans son historique.
   la page du document le signale (« seuls les 30 000 premiers caractères sur N seront utilisés »).
 - Modèle lu depuis `GEMINI_MODEL`, clé depuis `GEMINI_API_KEY` (serveur uniquement).
 - Réponse demandée en JSON structuré (schéma imposé) : `{ cards: [{ question, answer, excerpt }] }`.
-- Le serveur vérifie :
-  - le nombre de cartes est **exactement** celui demandé ;
+- Le serveur vérifie **chaque carte** :
   - chaque champ est une chaîne non vide ;
   - chaque `excerpt` (≥ 20 caractères) **existe dans le texte envoyé**, après normalisation
-    (casse, espaces, césures, guillemets/tirets typographiques).
-- Si la vérification échoue : une seule nouvelle tentative, puis message d'erreur clair.
-  Les cartes existantes du document ne sont pas modifiées.
-- Si tout est valide : les cartes (question, réponse, extrait) remplacent celles du document
-  dans une seule transaction.
+    (casse, espaces, césures, guillemets/tirets typographiques) ;
+  - l'`excerpt` n'est pas un titre ou sous-titre (ligne isolée sans ponctuation finale).
+- Les cartes valides sont gardées ; seules les cartes manquantes sont redemandées à Gemini,
+  avec la raison des refus, **au plus 2 relances**. Jamais plus de cartes que demandé.
+- Chaque refus est journalisé côté serveur avec l'extrait (tronqué à 100 caractères).
+- Les cartes valides remplacent celles du document dans une seule transaction. S'il en manque
+  encore après les relances, l'interface affiche « X cartes générées sur Y demandées ».
+  Si aucune carte n'est valide : message d'erreur, cartes existantes inchangées.
 - Indicateur de progression visible avec 3 étapes réelles : **Extraction → Génération → Vérification**,
   l'étape en cours et les étapes terminées sont visibles ; une erreur s'affiche sur l'étape concernée.
   (L'étape « Extraction » lit le texte extrait à l'upload et le tronque ; l'upload affiche lui aussi
