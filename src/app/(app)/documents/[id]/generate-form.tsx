@@ -5,10 +5,10 @@ import { useState } from "react";
 import { MAX_CARDS, MIN_CARDS } from "@/lib/cards";
 import type { Step } from "@/lib/generation";
 
-const STEPS: { id: Step; label: string }[] = [
-  { id: "extraction", label: "Extraction du texte" },
-  { id: "generation", label: "Génération par Gemini" },
-  { id: "verification", label: "Vérification des extraits" },
+const STEPS: { id: Step; label: string; detail: string }[] = [
+  { id: "extraction", label: "Lecture du document", detail: "Préparation du texte extrait du PDF." },
+  { id: "generation", label: "Rédaction des cartes", detail: "Gemini choisit les notions clés et rédige questions et réponses." },
+  { id: "verification", label: "Vérification des sources", detail: "Chaque extrait est recherché mot pour mot dans le document." },
 ];
 
 type Result = { done: number; requested: number };
@@ -73,9 +73,23 @@ export function GenerateForm({ documentId, hasCards }: { documentId: string; has
   };
 
   return (
-    <form action={generate} className="rounded-lg bg-white p-6 shadow">
-      <div className="flex flex-wrap items-end gap-4">
-        <label className="text-sm font-medium text-slate-700">
+    // onSubmit plutôt qu'une action de formulaire : React n'afficherait les états intermédiaires
+    // d'une action (étapes, bouton désactivé) qu'à la fin de la génération.
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        generate(new FormData(e.currentTarget));
+      }}
+      className="panel p-5 sm:p-6"
+    >
+      <h2 className="font-semibold">{hasCards ? "Regénérer les cartes" : "Générer les cartes"}</h2>
+      <p className="mt-1 text-sm text-slate-500">
+        {hasCards
+          ? "Une nouvelle génération remplace les cartes actuelles."
+          : "Les questions, réponses et extraits sont tirés uniquement du texte du document."}
+      </p>
+      <div className="mt-4 flex flex-wrap items-end gap-3">
+        <label className="label">
           Nombre de cartes ({MIN_CARDS} à {MAX_CARDS})
           <input
             name="count"
@@ -84,57 +98,73 @@ export function GenerateForm({ documentId, hasCards }: { documentId: string; has
             max={MAX_CARDS}
             defaultValue={10}
             required
-            className="mt-1 block w-28 rounded border border-slate-300 px-3 py-2"
+            className="input w-28"
           />
         </label>
-        <button
-          disabled={running}
-          className="rounded bg-indigo-600 px-4 py-2 font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {hasCards ? "Regénérer les cartes" : "Générer les cartes"}
+        <button disabled={running} className={`btn ${hasCards ? "btn-secondary" : "btn-primary"}`}>
+          {running && <span className="spinner" aria-hidden />}
+          {running ? "Génération en cours…" : hasCards ? "Regénérer les cartes" : "Générer les cartes"}
         </button>
       </div>
-      {hasCards && !running && (
-        <p className="mt-2 text-xs text-slate-500">Une nouvelle génération remplace les cartes actuelles.</p>
-      )}
 
       {(running || generated !== null || (error && current >= 0)) && (
-        <ol className="mt-5 space-y-2 text-sm" aria-live="polite">
-          {STEPS.map((s, i) => {
-            const state = stepState(i);
-            return (
-              <li key={s.id} className="flex items-center gap-2">
-                <span
-                  className={
-                    {
-                      done: "text-green-600",
-                      active: "animate-pulse text-indigo-600",
-                      failed: "text-red-600",
-                      pending: "text-slate-300",
-                    }[state]
-                  }
-                >
-                  {{ done: "✓", active: "●", failed: "✗", pending: "○" }[state]}
-                </span>
-                <span className={state === "pending" ? "text-slate-400" : ""}>{s.label}</span>
-              </li>
-            );
-          })}
-        </ol>
+        <div className="mt-6 border-t border-slate-100 pt-5">
+          {running && (
+            <div className="mb-5" aria-hidden>
+              <p className="mb-2 text-sm text-slate-600">L&apos;IA travaille sur votre document, cela prend généralement quelques secondes.</p>
+              <div className="h-1.5 overflow-hidden rounded-full bg-indigo-100">
+                <div className="h-full w-1/3 animate-progress rounded-full bg-indigo-500 motion-reduce:animate-none" />
+              </div>
+            </div>
+          )}
+          <ol className="space-y-4" aria-live="polite" aria-label="Progression de la génération">
+            {STEPS.map((s, i) => {
+              const state = stepState(i);
+              return (
+                <li key={s.id} className="flex gap-3">
+                  <span
+                    className={`grid size-7 shrink-0 place-items-center rounded-full text-sm font-bold ${
+                      {
+                        done: "bg-emerald-600 text-white",
+                        active: "bg-indigo-50 text-indigo-600 ring-2 ring-indigo-600",
+                        failed: "bg-rose-600 text-white",
+                        pending: "bg-white text-slate-500 ring-1 ring-slate-300",
+                      }[state]
+                    }`}
+                  >
+                    {state === "active" ? <span className="spinner size-3.5" /> : { done: "✓", failed: "✕", pending: i + 1 }[state]}
+                  </span>
+                  <span>
+                    <span className={`block text-sm font-semibold ${state === "pending" ? "text-slate-500" : "text-slate-900"}`}>
+                      {s.label}
+                      <span className="sr-only">
+                        {{ done: " : terminé", active: " : en cours", failed: " : échec", pending: " : à venir" }[state]}
+                      </span>
+                    </span>
+                    <span className="block text-sm text-slate-500">{s.detail}</span>
+                  </span>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       )}
+
       {generated &&
         (generated.done === generated.requested ? (
-          <p className="mt-3 text-sm font-medium text-green-700">
-            {generated.done} cartes générées, extraits vérifiés dans le document.
+          <p className="alert alert-success mt-5">
+            <strong className="font-semibold">{generated.done} cartes générées</strong>, extraits vérifiés dans le document.
           </p>
         ) : (
-          <p className="mt-3 text-sm font-medium text-amber-700">
-            {generated.done} cartes générées sur {generated.requested} demandées : les autres n&apos;ont pas pu
-            être vérifiées dans le document. Vous pouvez relancer la génération.
+          <p className="alert alert-warning mt-5">
+            <strong className="font-semibold">
+              {generated.done} cartes générées sur {generated.requested} demandées
+            </strong>{" "}
+            : les autres n&apos;ont pas pu être vérifiées dans le document. Vous pouvez relancer la génération.
           </p>
         ))}
       {error && (
-        <p role="alert" className="mt-3 text-sm text-red-600">
+        <p role="alert" className="alert alert-error mt-5">
           {error}
         </p>
       )}
