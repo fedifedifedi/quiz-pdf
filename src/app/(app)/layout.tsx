@@ -1,27 +1,31 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { logout } from "../(auth)/actions";
+import { Logo } from "../logo";
 
 export default async function AppLayout({ children }: LayoutProps<"/">) {
   const user = await requireUser();
 
   return (
     <>
-      <header className="border-b border-slate-200 bg-white">
-        <nav className="mx-auto flex max-w-3xl items-center gap-6 px-6 py-3">
-          <Link href="/" className="font-semibold">
-            Quiz PDF
+      <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/90 backdrop-blur">
+        <nav className="mx-auto flex max-w-4xl items-center gap-4 px-4 py-3 sm:gap-6 sm:px-6">
+          <Link href="/" aria-label="Quiz PDF, mes documents" className="rounded-lg">
+            <Logo />
           </Link>
-          <Link href="/history" className="text-sm text-slate-600 hover:text-slate-900">
+          <Link href="/" className="hidden text-sm font-medium text-slate-600 hover:text-slate-900 sm:inline">
+            Documents
+          </Link>
+          <Link href="/history" className="text-sm font-medium text-slate-600 hover:text-slate-900">
             Historique
           </Link>
-          <span className="ml-auto text-sm text-slate-500">{user.email}</span>
-          <form action={logout}>
-            <button className="text-sm text-slate-600 hover:text-slate-900">Déconnexion</button>
+          <span className="ml-auto hidden truncate text-sm text-slate-500 md:inline">{user.email}</span>
+          <form action={logout} className="ml-auto md:ml-0">
+            <button className="btn btn-secondary px-3 py-1.5">Déconnexion</button>
           </form>
         </nav>
       </header>
-      <main className="mx-auto max-w-3xl px-6 py-8">{children}</main>
+      <main className="mx-auto max-w-4xl px-4 py-8 sm:px-6 sm:py-10">{children}</main>
     </>
   );
 }
