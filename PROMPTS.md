@@ -30,6 +30,14 @@ Consignes données à l'agent (Claude Code) pendant le test, et ce que j'ai corr
    merge de la PR #6 ; PR suivante : séance de révision, score recalculé côté serveur, historique.
 8. **Fin** : merge de la PR #7, PR `docs/readme` (README court, PROMPTS.md finalisé), vérifier
    qu'il ne reste ni code mort ni fichier inutile, et qu'aucun secret n'est dans l'historique git.
+9. **Design (PR `feat/design`)** : améliorer le design sans changer le fonctionnement, pour une
+   interface propre et professionnelle, comme un produit livré à un client. Identité visuelle
+   cohérente (couleurs, typographie, espacements) ; séance de révision avec une vraie carte qui se
+   retourne (animation recto/verso) et des boutons Bon/Faux bien visibles ; progression claire et
+   rassurante pendant la génération ; états vides et messages d'erreur soignés ; score final mis en
+   valeur ; responsive et accessible (contrastes, focus clavier). Contraintes : Tailwind uniquement,
+   aucune nouvelle bibliothèque, ne toucher ni à la logique, ni à la base, ni à l'API, 43 tests verts,
+   pas de code mort, aucun appel à Gemini. Me montrer les changements page par page avant de merger.
 
 ## Mes tests manuels (Chrome, `npm run dev`, console F12)
 
@@ -64,6 +72,20 @@ Consignes données à l'agent (Claude Code) pendant le test, et ce que j'ai corr
   la PR suivante sur `main` avant de merger.
 - Nettoyage final : constantes 5 et 30 dupliquées en dur dans le formulaire et la route (remplacées par
   `MIN_CARDS` et `MAX_CARDS`), exports inutiles retirés.
+
+## Bug trouvé par l'agent (et manqué par mes tests manuels)
+
+- **Progression invisible pendant la génération.** C'est l'agent, et non moi, qui l'a trouvé, en
+  faisant les captures « avant » de la PR design : génération lancée, et pourtant aucune étape affichée
+  ni bouton désactivé. Cause : le formulaire passait par une *action* React 19, dont les mises à jour
+  d'état n'apparaissent qu'à la fin de l'action. Pendant que Gemini travaillait, l'utilisateur ne voyait
+  donc rien.
+- Mes tests manuels l'avaient manqué : je ne voyais que la liste des étapes cochées à la fin, que la
+  correction « progression lisible » (point 7 ci-dessous) laissait affichée, et je l'ai prise pour une
+  progression en direct.
+- Correction dans la PR design : soumission par `onSubmit` au lieu d'une action de formulaire, sans
+  changement côté serveur. Vérifiée sur capture (génération simulée dans le navigateur de test, sans
+  appel à Gemini).
 
 ## Ce que j'ai corrigé moi-même
 
