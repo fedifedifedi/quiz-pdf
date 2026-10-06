@@ -14,6 +14,9 @@ next-env.d.ts
 *.db
 *.db-journal
 
+# client Prisma généré
+src/generated/
+
 # divers
 .DS_Store
 coverage/
