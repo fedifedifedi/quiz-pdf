@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { MAX_CARDS, MIN_CARDS } from "@/lib/cards";
 import type { Step } from "@/lib/generation";
 
 const STEPS: { id: Step; label: string }[] = [
@@ -75,12 +76,12 @@ export function GenerateForm({ documentId, hasCards }: { documentId: string; has
     <form action={generate} className="rounded-lg bg-white p-6 shadow">
       <div className="flex flex-wrap items-end gap-4">
         <label className="text-sm font-medium text-slate-700">
-          Nombre de cartes (5 à 30)
+          Nombre de cartes ({MIN_CARDS} à {MAX_CARDS})
           <input
             name="count"
             type="number"
-            min={5}
-            max={30}
+            min={MIN_CARDS}
+            max={MAX_CARDS}
             defaultValue={10}
             required
             className="mt-1 block w-28 rounded border border-slate-300 px-3 py-2"
