@@ -67,7 +67,9 @@ obtient un score enregistré dans son historique.
 
 ### 6. Score et historique
 - En fin de séance : score en pourcentage (arrondi) affiché et enregistré (bonnes réponses, total, %).
-- Le serveur recalcule le total à partir des cartes du document de l'utilisateur et rejette un score incohérent.
+- Le navigateur n'envoie que les identifiants des cartes jugées « Bon ». Le serveur recalcule bonnes
+  réponses, total et pourcentage à partir des cartes du document de l'utilisateur ; un identifiant
+  inconnu, répété ou d'un autre document est ignoré, donc un score incohérent est impossible.
 - Page historique : séances de l'utilisateur, plus récentes d'abord (date, document, score).
 
 ## Sécurité et isolation

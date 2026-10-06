@@ -23,7 +23,8 @@ src/lib/pdf.ts              validation du fichier + extraction du texte
 src/lib/documents.ts        requêtes documents/cartes, toutes filtrées par userId
 src/lib/gemini.ts           appel Gemini (server-only)
 src/lib/cards.ts            prompt, schéma JSON, validation des cartes
-src/lib/generation.ts       génération → vérification (1 nouvelle tentative) → enregistrement
+src/lib/generation.ts       génération → vérification → relance des cartes manquantes → enregistrement
+src/lib/reviews.ts          score recalculé côté serveur, historique (filtrés par userId)
 tests/                      tests Vitest
 ```
 
