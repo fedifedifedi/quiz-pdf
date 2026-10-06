@@ -1,5 +1,5 @@
 import { getUser } from "@/lib/auth";
-import { parseCardCount } from "@/lib/cards";
+import { MAX_CARDS, MIN_CARDS, parseCardCount } from "@/lib/cards";
 import { generateCards } from "@/lib/generation";
 
 // Réponse en flux NDJSON : une ligne JSON par étape ({ step }), puis { done, requested } ou { error }.
@@ -10,7 +10,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   const count = parseCardCount(body?.count);
   if (typeof body?.documentId !== "string" || !count) {
-    return Response.json({ error: "Choisissez entre 5 et 30 cartes." }, { status: 400 });
+    return Response.json({ error: `Choisissez entre ${MIN_CARDS} et ${MAX_CARDS} cartes.` }, { status: 400 });
   }
 
   const encoder = new TextEncoder();

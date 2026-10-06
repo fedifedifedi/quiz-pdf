@@ -18,7 +18,7 @@ export function truncateText(text: string) {
 }
 
 // Pour une relance : questions déjà retenues (à ne pas répéter) et refus précédents (à corriger).
-export type Retry = { keptQuestions: string[]; rejected: string[] };
+type Retry = { keptQuestions: string[]; rejected: string[] };
 
 function retryRules({ keptQuestions, rejected }: Retry) {
   const section = (title: string, items: string[]) =>

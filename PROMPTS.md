@@ -1,104 +1,105 @@
 # PROMPTS.md
 
+Consignes données à l'agent (Claude Code) pendant le test, et ce que j'ai corrigé moi-même.
+
 ## Consignes données à l'agent
 
-1. Énoncé complet du test (projet, contraintes, livrables) + demande de vérifier l'environnement,
-   rédiger `SPEC.md` et `CLAUDE.md`, proposer architecture et découpage en PR, et attendre validation
-   avant d'implémenter.
-2. Validation de l'architecture et du découpage, avec mes décisions :
-   - le document est enregistré dès l'upload, la génération se lance depuis la page du document
-     (relance possible sans renvoyer le PDF) — l'agent proposait un enregistrement unique après génération ;
-   - seuil PDF scanné : 200 caractères ;
-   - limite de 30 000 caractères envoyés à Gemini, **signalée à l'utilisateur** si le texte est tronqué ;
-   - extraction avec `unpdf`.
-   Ajouts : stocker aussi le fichier PDF en base (`Bytes`, avec la limite de taille) ;
-   CI GitHub Actions minimale (lint, typecheck, tests) dès la PR 1.
-   Puis : commit initial et enchaînement des PR 1 à 4.
-3. Relecture exigeante de chaque PR (sécurité, isolation par `userId`, code mort, complexité),
-   publiée en commentaire, correction des bloquants, merge une fois la CI verte.
-   Corrections de `validateCards` d'après le texte réel extrait de mon PDF de test.
-   Génération Gemini (PR #6) : clé jamais affichée ni copiée ; script qui vérifie la clé et liste les
-   modèles en un seul appel ; je choisis moi-même `GEMINI_MODEL` ; mock uniquement dans les tests
-   (budget 5 à 10 €).
-4. Après mon test réel de génération : corrections de la PR #6 avant merge (voir ci-dessous), puis
-   merge de la PR #5. Je reteste avant le merge de la PR #6.
-5. Après mes tests réels à 10 et 30 cartes : correction des doublons, merge de la PR #6, puis PR
-   suivante : séance de révision (une carte à la fois, retourner, Bon/Faux), score final en
-   pourcentage recalculé côté serveur, historique des séances.
+1. **Cadrage.** Énoncé complet du test (parcours, contraintes, livrables). Vérifier l'environnement et
+   configurer git, rédiger `SPEC.md` (critères d'acceptation) et `CLAUDE.md` (stack, structure,
+   commandes, règles : une branche et une PR par fonctionnalité, relecture avant merge, aucun secret),
+   proposer l'architecture et un découpage en PR courtes, commencer par ce qui ne dépend pas de la clé
+   Gemini, **attendre ma validation avant d'implémenter**.
+2. **Validation de l'architecture**, avec mes décisions : document enregistré dès l'upload, seuil
+   « PDF scanné » à 200 caractères, limite de 30 000 caractères envoyés à Gemini signalée à
+   l'utilisateur, extraction avec `unpdf`. Ajouts : stocker aussi le PDF en base (`Bytes`), CI GitHub
+   Actions minimale (lint, typecheck, tests). Puis commit initial et PR 1 à 4.
+3. **Relecture et merge des PR 1 à 4** : relecture exigeante (sécurité, isolation par `userId`, code
+   mort, complexité) publiée en commentaire, correction des bloquants, merge avec CI verte.
+   Corriger `validateCards` d'après le texte réel extrait de mon PDF. PR Gemini : clé jamais affichée,
+   copiée ni journalisée ; script qui vérifie la clé et liste les modèles en **un seul appel** ; je
+   choisis moi-même `GEMINI_MODEL` ; faux provider uniquement dans les tests (budget 5 à 10 €).
+4. **Après mon 1er test réel de génération** : corriger la double numérotation, la qualité
+   pédagogique (prompt) et la lisibilité de la progression, sans ralentir. Puis merge de la PR #5.
+5. **Après mon 2e test réel** : la double numérotation persiste, vérifier l'affichage et corriger à la
+   source (retirer le nettoyage serveur devenu inutile) ; refuser les sous-titres cités comme extraits.
+6. **Après mon 3e test réel** : sortir du tout-ou-rien (garder les cartes valides, ne redemander que les
+   manquantes avec la raison du refus, 2 relances max, enregistrer un résultat partiel « X cartes sur
+   Y »), journaliser les extraits refusés, vérifier les faux positifs de la règle « titre », ajouter un
+   test.
+7. **Après mon test à 30 cartes** : refuser les doublons (même extrait), une notion par carte, test ;
+   merge de la PR #6 ; PR suivante : séance de révision, score recalculé côté serveur, historique.
+8. **Fin** : merge de la PR #7, PR `docs/readme` (README court, PROMPTS.md finalisé), vérifier
+   qu'il ne reste ni code mort ni fichier inutile, et qu'aucun secret n'est dans l'historique git.
 
-## Mes tests manuels (navigateur Chrome, `npm run dev`, console F12)
+## Mes tests manuels (Chrome, `npm run dev`, console F12)
 
-Après les PR 1 à 4, tout est OK :
-- inscription, connexion, déconnexion ;
-- console du navigateur sans erreur ;
-- upload d'un vrai PDF (`cours-relativite.pdf`, 27 061 caractères extraits), texte affiché ;
-- faux PDF (`.txt` renommé en `.pdf`) : message clair ;
-- URL d'un document sans session : redirection vers `/login` ;
-- mauvais mot de passe : message clair ;
-- second utilisateur sur l'URL du document du premier : 404, et sa liste est vide.
+- **PR 1 à 4** : inscription, connexion, déconnexion ; console sans erreur ; upload de
+  `cours-relativite.pdf` (27 061 caractères extraits) ; faux PDF (`.txt` renommé) refusé avec un
+  message clair ; document sans session → `/login` ; mauvais mot de passe → message clair ; second
+  utilisateur sur l'URL du document du premier → 404, et liste vide.
+- **Génération, 1er test** (`gemini-3.5-flash-lite`, 10 cartes) : 10 cartes en 4 s, toutes fidèles,
+  mais double numérotation, cartes concentrées au début du document et anecdotiques, progression trop
+  rapide pour être lue.
+- **2e test** : nette amélioration (cartes réparties, notions clés, réponses complètes), mais la double
+  numérotation persiste sur des cartes regénérées, et 2 cartes citent un sous-titre comme extrait.
+- **3e test** : la génération de 10 cartes échoue souvent après 2 tentatives, alors qu'une seule carte
+  sur 10 est refusée à chaque fois.
+- **4e test** : 10 cartes OK ; 30 cartes OK et toutes justes, mais 3 paires de doublons.
+- **Révision (PR 7)** : séance de 10 cartes (7 Bon, 3 Faux) → 70 % ; historique OK, le plus récent en
+  premier ; un second utilisateur ne voit aucune séance du premier ; console sans erreur.
 
-Génération réelle (PR #6, `gemini-3.5-flash-lite`, `cours-relativite.pdf`, 10 cartes) : 10 cartes
-en 4 s, toutes fidèles au PDF, extraits sources corrects. Trois défauts relevés (voir ci-dessous).
+## Relecture des PR (commentaires publiés sur chaque PR)
 
-## Relecture des PR 1 à 4 (commentaires publiés sur chaque PR)
-
-- Aucun bloquant de sécurité ni d'isolation : toutes les requêtes sur les documents sont filtrées par
-  `userId`, la 404 ne révèle pas l'existence d'un document, `requireUser()` est appelé dans chaque page
-  et action.
-- Corrigé en cours de route : un test dépendant de l'ordre d'exécution (`db.test.ts`), supprimé.
-- Non bloquants, acceptés et documentés : limite de 72 octets de bcrypt, possibilité de savoir si un email
-  a un compte (inhérent au formulaire d'inscription), pas de limite de tentatives de connexion (app
-  locale), `pdf.destroy()` absent, limite de 10 Mo dupliquée côté client (évite d'embarquer `unpdf`
-  dans le navigateur), cartes en double non détectées.
-- Incident de merge : en supprimant la branche de la PR 1 après son merge, GitHub a fermé la PR 2
-  empilée dessus. L'agent a recréé la branche, rouvert la PR 2 et l'a rebasée sur `main`. Pour les
-  suivantes, il a repassé la PR suivante sur `main` **avant** chaque merge.
+- Aucun bloquant de sécurité ni d'isolation : toutes les requêtes sur documents, cartes et séances sont
+  filtrées par `userId`, une ressource d'un autre utilisateur donne une 404 sans révéler son existence,
+  `requireUser()` est appelé dans chaque page, action et route.
+- Clé Gemini : `server-only`, absente du bundle client (vérifié), jamais journalisée. Historique git
+  vérifié : ni la clé, ni `.env`, ni base SQLite, ni PDF n'ont jamais été commités.
+- Non bloquants, acceptés et documentés : limite de 72 octets de bcrypt ; possibilité de savoir si un
+  email a un compte (inhérent à l'inscription) ; pas de limite de tentatives de connexion (app locale) ;
+  `pdf.destroy()` absent ; limite de 10 Mo dupliquée côté client (évite d'embarquer `unpdf` dans le
+  navigateur) ; génération non annulée si l'on quitte la page.
+- Incident de merge : supprimer la branche de la PR 1 après son merge a fermé la PR 2 empilée dessus.
+  L'agent a recréé la branche, rouvert la PR et l'a rebasée sur `main` ; ensuite, il a toujours rebasé
+  la PR suivante sur `main` avant de merger.
+- Nettoyage final : constantes 5 et 30 dupliquées en dur dans le formulaire et la route (remplacées par
+  `MIN_CARDS` et `MAX_CARDS`), exports inutiles retirés.
 
 ## Ce que j'ai corrigé moi-même
 
-- Ordre d'enregistrement du document (voir consigne 2).
-- Signalement de la troncature dans l'interface (voir consigne 2).
-- Vérification des extraits sur du texte réel : j'ai repéré dans le texte extrait de mon PDF des titres
-  aux lettres espacées et des mots coupés en fin de ligne, et demandé de les tolérer, ainsi que de
-  demander à Gemini des extraits du corps du texte plutôt que des titres. Résultat : la comparaison se
-  fait désormais sans espaces, tirets ni guillemets, avec des tests sur les extraits réels.
-- Double numérotation à l'affichage (« 1. 1. Quelle était… ») :
-  - **première correction de l'agent, sur la mauvaise cause** : il l'a attribuée au modèle et a ajouté
-    « sans numéro » au prompt et un nettoyage du numéro côté serveur. **Mon second test réel a montré
-    que le défaut persistait sur des cartes regénérées** : la cause n'était donc pas le modèle ;
-  - vraie cause, confirmée en base (aucune question stockée ne commence par un numéro) : la page
-    numérotait à deux endroits, la liste `<ol>` (numérotation implicite) et un `{i + 1}.` écrit à la main
-    dans le composant ;
-  - correction à la source : une seule numérotation, celle de la liste (`list-decimal`). Le nettoyage
-    serveur, la consigne « sans numéro » et leur test ont été retirés (code mort).
-- Extraits qui citaient des sous-titres (« Le temps ralentit quand on va vite », « La simultanéité est
-  relative ») au lieu d'une phrase du corps du texte : le prompt demande « la phrase du corps du texte
-  qui contient la réponse », et le serveur refuse un extrait identique à une ligne du texte sans
-  ponctuation finale (titre ou sous-titre). Rejouée sur mes 10 cartes réelles, la règle refuse
-  exactement les cartes 2 et 3 et accepte les 8 autres.
-- **Fragilité du tout-ou-rien, révélée par mon test réel** : la génération de 10 cartes échouait
-  souvent après 2 tentatives alors qu'à chaque fois **une seule carte sur 10** était refusée
-  (« extrait introuvable » ou « titre ») et que les 9 autres étaient jetées. Ce serait pire à 30
-  cartes. Corrections demandées :
-  - garder les cartes valides et ne redemander à Gemini que les cartes manquantes, avec la raison
-    du refus, au plus 2 relances ;
-  - s'il en manque encore : enregistrer les cartes valides et afficher « X cartes générées sur Y
-    demandées » ;
-  - journaliser le texte de l'extrait refusé (tronqué à 100 caractères) pour distinguer une
-    reformulation de Gemini d'un problème de normalisation ;
-  - vérifier l'absence de faux positifs de la règle « titre ». Rejouée sur les 262 phrases réelles
-    du PDF : 0 refusée comme titre (avec ou sans point final), et 0 phrase recopiée du texte jugée
-    « introuvable ». Les « extrait introuvable » viennent donc très probablement de reformulations
-    de Gemini, pas de la normalisation ; le nouveau journal permet de le confirmer ;
-  - test ajouté : 10 cartes dont 1 invalide → une seule carte redemandée.
-- **Doublons, révélés par mon test réel à 30 cartes** : 30 cartes justes, mais 3 paires de cartes
-  citaient exactement le même extrait (Minkowski et l'espace-temps, LIGO le 14 septembre 2015, vitesse
-  de la lumière à 299 792 458 m/s). Correction simple, sans algorithme de similarité : une carte dont
-  l'extrait normalisé est identique à celui d'une carte déjà retenue est refusée comme doublon et
-  redemandée par la relance ciblée ; le prompt demande une notion différente par carte. Tests ajoutés.
-- Qualité pédagogique : les cartes venaient surtout du début du document et portaient sur des anecdotes
-  (dates, noms). Le prompt demande maintenant des cartes réparties sur tout le document, centrées sur
-  les notions clés et leurs explications, avec des réponses complètes (le résultat d'une expérience,
-  pas seulement sa méthode). Le prompt reste court et générique (aucun exemple propre à la relativité).
-- Progression trop rapide pour être lue (génération en 4 s) : sans ralentissement artificiel, les étapes
-  restent affichées une fois la génération finie, toutes cochées, avec un message de succès.
+1. **Retour au texte de l'énoncé pour l'étape 2.** L'agent proposait d'enregistrer le document
+   seulement après une génération réussie, en une seule transaction avec les cartes. L'énoncé dit
+   « Texte extrait, document enregistré » dès le dépôt : j'ai imposé l'enregistrement à l'upload et la
+   génération depuis la page du document, ce qui permet aussi de relancer sans renvoyer le PDF. J'ai
+   aussi demandé de stocker le fichier PDF en base et d'ajouter une CI dès la PR 1.
+2. **Troncature visible.** Si le texte dépasse 30 000 caractères, l'interface doit le dire.
+3. **Cas réels de `validateCards`.** En lisant le texte réellement extrait de mon PDF, j'ai repéré des
+   titres aux lettres espacées (`L ' E X P É R I E N C E D E M I C H E L S O N`) et des mots coupés en
+   fin de ligne (`années-⏎lumière`, `rez-de-⏎chaussée`). Correction : la comparaison se fait sans
+   espaces, tirets ni guillemets, avec des tests sur ces extraits réels ; le prompt demande des extraits
+   du corps du texte.
+4. **Double numérotation mal diagnostiquée.** Après mon 1er test (« 1. 1. Quelle était… »), l'agent a
+   attribué le défaut au modèle et ajouté une consigne « sans numéro » et un nettoyage côté serveur.
+   **Mon 2e test a montré que le défaut persistait sur des cartes regénérées** : la cause n'était pas le
+   modèle. Vraie cause, confirmée en base (aucune question stockée ne commence par un numéro) : la page
+   numérotait deux fois, via la liste `<ol>` et via un `{i + 1}.` écrit à la main. Correction à la source
+   (une seule numérotation), et suppression du nettoyage serveur, de la consigne et de leur test.
+5. **Sous-titres cités comme extraits** (« La simultanéité est relative ») : l'extrait doit être la phrase
+   du corps du texte qui contient la réponse. Le serveur refuse un extrait identique à une ligne sans
+   ponctuation finale. Rejouée sur mes 10 cartes, la règle refuse exactement les 2 cartes fautives ; sur
+   les 262 phrases réelles du PDF, aucun faux positif.
+6. **Qualité pédagogique.** Les cartes venaient surtout du début du document et portaient sur des
+   anecdotes. Le prompt, gardé court et générique, demande des cartes réparties sur tout le document,
+   centrées sur les notions clés, avec des réponses complètes (le résultat d'une expérience, pas
+   seulement sa méthode).
+7. **Progression lisible sans ralentir** : les étapes restent affichées et cochées à la fin, plutôt
+   que d'ajouter des délais artificiels.
+8. **Fin du tout-ou-rien.** Mon 3e test a révélé qu'une seule carte refusée sur 10 faisait jeter les 9
+   autres, d'où des échecs fréquents (pire à 30 cartes). Désormais, les cartes valides sont gardées,
+   seules les manquantes sont redemandées avec la raison du refus (2 relances max), un résultat partiel
+   est enregistré et affiché (« X cartes générées sur Y demandées »), et chaque refus est journalisé
+   avec son extrait. Vérification associée : aucune phrase recopiée du PDF n'est jugée « introuvable »,
+   donc la normalisation est hors de cause ; les refus viennent de reformulations de Gemini.
+9. **Doublons à 30 cartes.** Mon test à 30 cartes a révélé 3 paires de cartes citant exactement le même
+   extrait. Correction simple, sans algorithme de similarité : un extrait normalisé identique à celui
+   d'une carte retenue est refusé comme doublon et redemandé ; le prompt demande une notion par carte.

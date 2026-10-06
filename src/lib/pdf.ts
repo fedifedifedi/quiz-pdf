@@ -2,7 +2,7 @@ import { extractText, getDocumentProxy } from "unpdf";
 
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 // En dessous, on considère le PDF comme scanné (images sans texte sélectionnable).
-export const MIN_TEXT_CHARS = 200;
+const MIN_TEXT_CHARS = 200;
 
 type PdfResult = { error: string } | { bytes: Uint8Array<ArrayBuffer>; text: string };
 
