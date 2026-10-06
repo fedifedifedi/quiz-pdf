@@ -20,8 +20,10 @@ src/app/api/generate/       route POST : génération → vérification pour un 
 src/lib/db.ts               client Prisma
 src/lib/auth.ts             hash, sessions, requireUser
 src/lib/pdf.ts              validation du fichier + extraction du texte
+src/lib/documents.ts        requêtes documents/cartes, toutes filtrées par userId
 src/lib/gemini.ts           appel Gemini (server-only)
 src/lib/cards.ts            prompt, schéma JSON, validation des cartes
+src/lib/generation.ts       génération → vérification (1 nouvelle tentative) → enregistrement
 tests/                      tests Vitest
 ```
 

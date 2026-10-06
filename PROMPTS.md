@@ -17,8 +17,11 @@
 3. Relecture exigeante de chaque PR (sécurité, isolation par `userId`, code mort, complexité),
    publiée en commentaire, correction des bloquants, merge une fois la CI verte.
    Corrections de `validateCards` d'après le texte réel extrait de mon PDF de test.
-   PR 5 (Gemini) : clé jamais affichée ni copiée ; script qui vérifie la clé et liste les modèles
-   en un seul appel ; je choisis moi-même `GEMINI_MODEL` ; mock uniquement dans les tests (budget 5 à 10 €).
+   Génération Gemini (PR #6) : clé jamais affichée ni copiée ; script qui vérifie la clé et liste les
+   modèles en un seul appel ; je choisis moi-même `GEMINI_MODEL` ; mock uniquement dans les tests
+   (budget 5 à 10 €).
+4. Après mon test réel de génération : corrections de la PR #6 avant merge (voir ci-dessous), puis
+   merge de la PR #5. Je reteste avant le merge de la PR #6.
 
 ## Mes tests manuels (navigateur Chrome, `npm run dev`, console F12)
 
@@ -30,6 +33,9 @@ Après les PR 1 à 4, tout est OK :
 - URL d'un document sans session : redirection vers `/login` ;
 - mauvais mot de passe : message clair ;
 - second utilisateur sur l'URL du document du premier : 404, et sa liste est vide.
+
+Génération réelle (PR #6, `gemini-3.5-flash-lite`, `cours-relativite.pdf`, 10 cartes) : 10 cartes
+en 4 s, toutes fidèles au PDF, extraits sources corrects. Trois défauts relevés (voir ci-dessous).
 
 ## Relecture des PR 1 à 4 (commentaires publiés sur chaque PR)
 
@@ -53,3 +59,43 @@ Après les PR 1 à 4, tout est OK :
   aux lettres espacées et des mots coupés en fin de ligne, et demandé de les tolérer, ainsi que de
   demander à Gemini des extraits du corps du texte plutôt que des titres. Résultat : la comparaison se
   fait désormais sans espaces, tirets ni guillemets, avec des tests sur les extraits réels.
+- Double numérotation à l'affichage (« 1. 1. Quelle était… ») :
+  - **première correction de l'agent, sur la mauvaise cause** : il l'a attribuée au modèle et a ajouté
+    « sans numéro » au prompt et un nettoyage du numéro côté serveur. **Mon second test réel a montré
+    que le défaut persistait sur des cartes regénérées** : la cause n'était donc pas le modèle ;
+  - vraie cause, confirmée en base (aucune question stockée ne commence par un numéro) : la page
+    numérotait à deux endroits, la liste `<ol>` (numérotation implicite) et un `{i + 1}.` écrit à la main
+    dans le composant ;
+  - correction à la source : une seule numérotation, celle de la liste (`list-decimal`). Le nettoyage
+    serveur, la consigne « sans numéro » et leur test ont été retirés (code mort).
+- Extraits qui citaient des sous-titres (« Le temps ralentit quand on va vite », « La simultanéité est
+  relative ») au lieu d'une phrase du corps du texte : le prompt demande « la phrase du corps du texte
+  qui contient la réponse », et le serveur refuse un extrait identique à une ligne du texte sans
+  ponctuation finale (titre ou sous-titre). Rejouée sur mes 10 cartes réelles, la règle refuse
+  exactement les cartes 2 et 3 et accepte les 8 autres.
+- **Fragilité du tout-ou-rien, révélée par mon test réel** : la génération de 10 cartes échouait
+  souvent après 2 tentatives alors qu'à chaque fois **une seule carte sur 10** était refusée
+  (« extrait introuvable » ou « titre ») et que les 9 autres étaient jetées. Ce serait pire à 30
+  cartes. Corrections demandées :
+  - garder les cartes valides et ne redemander à Gemini que les cartes manquantes, avec la raison
+    du refus, au plus 2 relances ;
+  - s'il en manque encore : enregistrer les cartes valides et afficher « X cartes générées sur Y
+    demandées » ;
+  - journaliser le texte de l'extrait refusé (tronqué à 100 caractères) pour distinguer une
+    reformulation de Gemini d'un problème de normalisation ;
+  - vérifier l'absence de faux positifs de la règle « titre ». Rejouée sur les 262 phrases réelles
+    du PDF : 0 refusée comme titre (avec ou sans point final), et 0 phrase recopiée du texte jugée
+    « introuvable ». Les « extrait introuvable » viennent donc très probablement de reformulations
+    de Gemini, pas de la normalisation ; le nouveau journal permet de le confirmer ;
+  - test ajouté : 10 cartes dont 1 invalide → une seule carte redemandée.
+- **Doublons, révélés par mon test réel à 30 cartes** : 30 cartes justes, mais 3 paires de cartes
+  citaient exactement le même extrait (Minkowski et l'espace-temps, LIGO le 14 septembre 2015, vitesse
+  de la lumière à 299 792 458 m/s). Correction simple, sans algorithme de similarité : une carte dont
+  l'extrait normalisé est identique à celui d'une carte déjà retenue est refusée comme doublon et
+  redemandée par la relance ciblée ; le prompt demande une notion différente par carte. Tests ajoutés.
+- Qualité pédagogique : les cartes venaient surtout du début du document et portaient sur des anecdotes
+  (dates, noms). Le prompt demande maintenant des cartes réparties sur tout le document, centrées sur
+  les notions clés et leurs explications, avec des réponses complètes (le résultat d'une expérience,
+  pas seulement sa méthode). Le prompt reste court et générique (aucun exemple propre à la relativité).
+- Progression trop rapide pour être lue (génération en 4 s) : sans ralentissement artificiel, les étapes
+  restent affichées une fois la génération finie, toutes cochées, avec un message de succès.

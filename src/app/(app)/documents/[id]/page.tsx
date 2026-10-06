@@ -1,12 +1,15 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { MAX_TEXT_CHARS } from "@/lib/cards";
-import { getDocument } from "@/lib/documents";
+import { getCards, getDocument } from "@/lib/documents";
+import { GenerateForm } from "./generate-form";
 
 export default async function DocumentPage({ params }: PageProps<"/documents/[id]">) {
   const user = await requireUser();
-  const document = await getDocument(user.id, (await params).id);
+  const { id } = await params;
+  const document = await getDocument(user.id, id);
   if (!document) notFound();
+  const cards = await getCards(user.id, document.id);
 
   return (
     <div className="space-y-4">
@@ -27,6 +30,26 @@ export default async function DocumentPage({ params }: PageProps<"/documents/[id
           {document.text}
         </p>
       </details>
+
+      <GenerateForm documentId={document.id} hasCards={cards.length > 0} />
+
+      {cards.length > 0 && (
+        <section>
+          <h2 className="text-lg font-semibold">{cards.length} cartes</h2>
+          {/* Numérotation par la liste elle-même (une seule source de numéros). */}
+          <ol className="mt-3 list-decimal space-y-3 pl-6 marker:font-medium marker:text-slate-500">
+            {cards.map((card) => (
+              <li key={card.id} className="rounded-lg bg-white p-4 shadow">
+                <p className="font-medium">{card.question}</p>
+                <p className="mt-1 text-slate-700">{card.answer}</p>
+                <blockquote className="mt-2 border-l-2 border-slate-300 pl-3 text-sm italic text-slate-500">
+                  « {card.excerpt} »
+                </blockquote>
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
     </div>
   );
 }

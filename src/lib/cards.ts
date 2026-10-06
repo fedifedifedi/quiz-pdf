@@ -17,16 +17,31 @@ export function truncateText(text: string) {
   return text.slice(0, MAX_TEXT_CHARS);
 }
 
-export function buildPrompt(text: string, count: number) {
+// Pour une relance : questions déjà retenues (à ne pas répéter) et refus précédents (à corriger).
+export type Retry = { keptQuestions: string[]; rejected: string[] };
+
+function retryRules({ keptQuestions, rejected }: Retry) {
+  const section = (title: string, items: string[]) =>
+    items.length ? `\n${title}\n${items.map((item) => `- ${item}`).join("\n")}\n` : "";
+  return (
+    section("Ces questions sont déjà retenues, ne les répète pas :", keptQuestions) +
+    section("Ces cartes ont été refusées, ne refais pas ces erreurs :", rejected)
+  );
+}
+
+export function buildPrompt(text: string, count: number, retry?: Retry) {
   return `Tu crées des cartes de révision à partir d'un document.
 
 Règles :
-- Produis exactement ${count} cartes.
-- Chaque carte porte sur une information présente dans le document, sans rien inventer ni ajouter de connaissances extérieures.
-- "question" : une question précise ; "answer" : la réponse, courte.
-- "excerpt" : un passage COPIÉ MOT POUR MOT du corps du texte (une ou deux phrases complètes) qui justifie la réponse. Ne le reformule pas, ne le traduis pas. Ne cite pas un titre, un intertitre, le sommaire ou une légende.
-- Rédige les questions et réponses dans la langue du document.
-
+- Produis exactement ${count} carte(s), réparties sur l'ensemble du document (début, milieu et fin).
+- Privilégie les notions clés et leurs explications plutôt que les détails anecdotiques (dates, noms).
+- Une notion différente par carte : jamais deux cartes sur le même passage.
+- N'utilise que le document : n'invente rien, n'ajoute aucune connaissance extérieure.
+- "question" : une question précise.
+- "answer" : une réponse complète mais concise ; pour une expérience, donne son résultat, pas seulement sa méthode.
+- "excerpt" : la phrase du corps du texte qui contient la réponse, COPIÉE MOT POUR MOT (une ou deux phrases complètes). Jamais un titre, un sous-titre, le sommaire ou une légende.
+- Rédige dans la langue du document.
+${retry ? retryRules(retry) : ""}
 Document :
 """
 ${text}
@@ -64,11 +79,14 @@ export function normalize(text: string) {
     .replace(/[\s­\-‐‑‒–—"'`«»“”‘’]/g, "");
 }
 
+// Vérifie chaque carte séparément : les cartes valides sont gardées, chaque refus est expliqué
+// (avec l'extrait tronqué) pour le journal et pour la relance. Le nombre est géré par l'appelant.
+// keptExcerpts : extraits des cartes déjà retenues (appels précédents), pour refuser les doublons.
 export function validateCards(
   raw: string,
   sourceText: string,
-  count: number,
-): { cards: Card[] } | { error: string } {
+  keptExcerpts: string[] = [],
+): { cards: Card[]; rejected: string[] } | { error: string } {
   let data: unknown;
   try {
     data = JSON.parse(raw);
@@ -78,25 +96,45 @@ export function validateCards(
 
   const items = (data as { cards?: unknown })?.cards;
   if (!Array.isArray(items)) return { error: "champ cards manquant" };
-  if (items.length !== count) return { error: `${items.length} cartes reçues au lieu de ${count}` };
 
   const source = normalize(sourceText);
+  // Titres et sous-titres : lignes isolées sans ponctuation finale (« Le temps ralentit quand on va vite »).
+  const titles = new Set(
+    sourceText
+      .split("\n")
+      .filter((line) => !/[.!?…]\s*$/.test(line))
+      .map(normalize),
+  );
+  const rejectionReason = (excerpt: string) => {
+    if (excerpt.length < MIN_EXCERPT_CHARS) return "extrait trop court";
+    if (!source.includes(normalize(excerpt))) return "extrait introuvable dans le document (pas copié mot pour mot)";
+    if (titles.has(normalize(excerpt))) return "l'extrait est un titre, pas une phrase du texte";
+    return null;
+  };
+
   const cards: Card[] = [];
-  for (const [i, item] of items.entries()) {
+  const rejected: string[] = [];
+  const usedExcerpts = new Set(keptExcerpts.map(normalize));
+  for (const item of items) {
     const { question, answer, excerpt } = (item ?? {}) as Record<string, unknown>;
     if (![question, answer, excerpt].every((v) => typeof v === "string" && v.trim())) {
-      return { error: `carte ${i + 1} : champ manquant ou vide` };
+      rejected.push("champ manquant ou vide");
+      continue;
     }
     const card = {
       question: (question as string).trim(),
       answer: (answer as string).trim(),
       excerpt: (excerpt as string).trim(),
     };
-    if (card.excerpt.length < MIN_EXCERPT_CHARS) return { error: `carte ${i + 1} : extrait trop court` };
-    if (!source.includes(normalize(card.excerpt))) {
-      return { error: `carte ${i + 1} : extrait introuvable dans le document` };
+    const reason =
+      rejectionReason(card.excerpt) ??
+      (usedExcerpts.has(normalize(card.excerpt)) ? "doublon : même extrait qu'une autre carte" : null);
+    if (reason) {
+      rejected.push(`${reason} : « ${card.excerpt.slice(0, 100)} »`);
+    } else {
+      usedExcerpts.add(normalize(card.excerpt));
+      cards.push(card);
     }
-    cards.push(card);
   }
-  return { cards };
+  return { cards, rejected };
 }
