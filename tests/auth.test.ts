@@ -6,10 +6,7 @@ import {
   verifyPassword,
 } from "@/lib/auth";
 import { prisma } from "@/lib/db";
-
-async function createUser(email: string) {
-  return prisma.user.create({ data: { email, passwordHash: await hashPassword("motdepasse") } });
-}
+import { createUser } from "./helpers";
 
 describe("mots de passe", () => {
   test("sont hachés avec bcrypt et vérifiables", async () => {
