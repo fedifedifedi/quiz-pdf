@@ -49,6 +49,31 @@ describe("validateCards", () => {
   });
 });
 
+// Extraits tels que unpdf les produit sur cours-relativite.pdf (PDF réel de test).
+const REAL_SOURCE = `C O U R S D E V U L G A R I S A T I O N
+L ' E X P É R I E N C E D E M I C H E L S O N E T M O R L E Y ( 1 8 8 7 )
+Sur Terre, quelqu'un qui vit au rez-de-
+chaussée vieillit un tout petit peu moins vite que quelqu'un qui vit au dernier étage.
+Un amas de masses solaires, à environ 1,3 milliard d'années-
+lumière, qui forment un seul trou noir.`;
+
+describe("validateCards sur du texte réel extrait d'un PDF", () => {
+  test.each([
+    ["mot composé coupé en fin de ligne", "quelqu'un qui vit au rez-de-chaussée vieillit un tout petit peu"],
+    ["« années-lumière » coupé en fin de ligne", "à environ 1,3 milliard d'années-lumière, qui forment un seul trou noir"],
+    ["titre aux lettres espacées", "L'expérience de Michelson et Morley (1887)"],
+  ])("accepte un extrait fidèle : %s", (_, excerpt) => {
+    expect(validateCards(json([card(excerpt)]), REAL_SOURCE, 1)).toEqual({ cards: [card(excerpt)] });
+  });
+
+  test("refuse toujours un extrait modifié", () => {
+    const excerpt = "quelqu'un qui vit au rez-de-chaussée vieillit beaucoup plus vite";
+    expect(validateCards(json([card(excerpt)]), REAL_SOURCE, 1)).toEqual({
+      error: "carte 1 : extrait introuvable dans le document",
+    });
+  });
+});
+
 describe("normalize", () => {
   test("ignore casse, espaces, guillemets typographiques et césures", () => {
     expect(normalize("L’énergie  de\nla « cellule »")).toBe(normalize("l'Énergie de la cellule"));
