@@ -59,9 +59,20 @@ en 4 s, toutes fidèles au PDF, extraits sources corrects. Trois défauts relev�
   aux lettres espacées et des mots coupés en fin de ligne, et demandé de les tolérer, ainsi que de
   demander à Gemini des extraits du corps du texte plutôt que des titres. Résultat : la comparaison se
   fait désormais sans espaces, tirets ni guillemets, avec des tests sur les extraits réels.
-- Double numérotation à l'affichage (« 1. 1. En quelle année… ») : le modèle numérotait lui-même ses
-  questions. Le prompt demande désormais « sans numéro », et le serveur retire un éventuel numéro de
-  tête (« 1. », « 12) », « Carte 3 : ») sans toucher à une année ni à un décimal. Test ajouté.
+- Double numérotation à l'affichage (« 1. 1. Quelle était… ») :
+  - **première correction de l'agent, sur la mauvaise cause** : il l'a attribuée au modèle et a ajouté
+    « sans numéro » au prompt et un nettoyage du numéro côté serveur. **Mon second test réel a montré
+    que le défaut persistait sur des cartes regénérées** : la cause n'était donc pas le modèle ;
+  - vraie cause, confirmée en base (aucune question stockée ne commence par un numéro) : la page
+    numérotait à deux endroits, la liste `<ol>` (numérotation implicite) et un `{i + 1}.` écrit à la main
+    dans le composant ;
+  - correction à la source : une seule numérotation, celle de la liste (`list-decimal`). Le nettoyage
+    serveur, la consigne « sans numéro » et leur test ont été retirés (code mort).
+- Extraits qui citaient des sous-titres (« Le temps ralentit quand on va vite », « La simultanéité est
+  relative ») au lieu d'une phrase du corps du texte : le prompt demande « la phrase du corps du texte
+  qui contient la réponse », et le serveur refuse un extrait identique à une ligne du texte sans
+  ponctuation finale (titre ou sous-titre). Rejouée sur mes 10 cartes réelles, la règle refuse
+  exactement les cartes 2 et 3 et accepte les 8 autres.
 - Qualité pédagogique : les cartes venaient surtout du début du document et portaient sur des anecdotes
   (dates, noms). Le prompt demande maintenant des cartes réparties sur tout le document, centrées sur
   les notions clés et leurs explications, avec des réponses complètes (le résultat d'une expérience,

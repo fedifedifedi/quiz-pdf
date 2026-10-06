@@ -36,12 +36,11 @@ export default async function DocumentPage({ params }: PageProps<"/documents/[id
       {cards.length > 0 && (
         <section>
           <h2 className="text-lg font-semibold">{cards.length} cartes</h2>
-          <ol className="mt-3 space-y-3">
-            {cards.map((card, i) => (
+          {/* Numérotation par la liste elle-même (une seule source de numéros). */}
+          <ol className="mt-3 list-decimal space-y-3 pl-6 marker:font-medium marker:text-slate-500">
+            {cards.map((card) => (
               <li key={card.id} className="rounded-lg bg-white p-4 shadow">
-                <p className="font-medium">
-                  {i + 1}. {card.question}
-                </p>
+                <p className="font-medium">{card.question}</p>
                 <p className="mt-1 text-slate-700">{card.answer}</p>
                 <blockquote className="mt-2 border-l-2 border-slate-300 pl-3 text-sm italic text-slate-500">
                   « {card.excerpt} »

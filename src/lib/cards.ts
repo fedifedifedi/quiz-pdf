@@ -24,9 +24,9 @@ Règles :
 - Produis exactement ${count} cartes, réparties sur l'ensemble du document (début, milieu et fin).
 - Privilégie les notions clés et leurs explications plutôt que les détails anecdotiques (dates, noms).
 - N'utilise que le document : n'invente rien, n'ajoute aucune connaissance extérieure.
-- "question" : une question précise, sans numéro.
+- "question" : une question précise.
 - "answer" : une réponse complète mais concise ; pour une expérience, donne son résultat, pas seulement sa méthode.
-- "excerpt" : un passage COPIÉ MOT POUR MOT du corps du texte (une ou deux phrases complètes) qui justifie la réponse. Ne le reformule pas. Ne cite pas un titre, le sommaire ou une légende.
+- "excerpt" : la phrase du corps du texte qui contient la réponse, COPIÉE MOT POUR MOT (une ou deux phrases complètes). Jamais un titre, un sous-titre, le sommaire ou une légende.
 - Rédige dans la langue du document.
 
 Document :
@@ -83,6 +83,13 @@ export function validateCards(
   if (items.length !== count) return { error: `${items.length} cartes reçues au lieu de ${count}` };
 
   const source = normalize(sourceText);
+  // Titres et sous-titres : lignes isolées sans ponctuation finale (« Le temps ralentit quand on va vite »).
+  const titles = new Set(
+    sourceText
+      .split("\n")
+      .filter((line) => !/[.!?…]\s*$/.test(line))
+      .map(normalize),
+  );
   const cards: Card[] = [];
   for (const [i, item] of items.entries()) {
     const { question, answer, excerpt } = (item ?? {}) as Record<string, unknown>;
@@ -90,14 +97,16 @@ export function validateCards(
       return { error: `carte ${i + 1} : champ manquant ou vide` };
     }
     const card = {
-      // L'interface numérote déjà les cartes : on retire un éventuel « 1. », « 2) », « Carte 3 : ».
-      question: (question as string).trim().replace(/^(carte\s*)?\d{1,2}\s*[.):-]\s+/i, ""),
+      question: (question as string).trim(),
       answer: (answer as string).trim(),
       excerpt: (excerpt as string).trim(),
     };
     if (card.excerpt.length < MIN_EXCERPT_CHARS) return { error: `carte ${i + 1} : extrait trop court` };
     if (!source.includes(normalize(card.excerpt))) {
       return { error: `carte ${i + 1} : extrait introuvable dans le document` };
+    }
+    if (titles.has(normalize(card.excerpt))) {
+      return { error: `carte ${i + 1} : l'extrait est un titre, pas une phrase du texte` };
     }
     cards.push(card);
   }
