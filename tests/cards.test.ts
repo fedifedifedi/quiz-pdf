@@ -43,6 +43,21 @@ describe("validateCards", () => {
     });
   });
 
+  test("retire la numérotation ajoutée par le modèle en tête de question", () => {
+    const excerpt = VALID[0].excerpt;
+    const questions = [
+      ["1. En quelle année ?", "En quelle année ?"],
+      ["12) Pourquoi ?", "Pourquoi ?"],
+      ["Carte 3 : Comment ?", "Comment ?"],
+      // Ne pas toucher à ce qui ressemble à un numéro mais n'en est pas un :
+      ["1905 : que publie Einstein ?", "1905 : que publie Einstein ?"],
+      ["1.5 fois plus lent ?", "1.5 fois plus lent ?"],
+    ];
+    const cards = questions.map(([question]) => ({ question, answer: "R", excerpt }));
+    const result = validateCards(json(cards), SOURCE, questions.length);
+    expect("cards" in result && result.cards.map((c) => c.question)).toEqual(questions.map(([, q]) => q));
+  });
+
   test("refuse un JSON invalide ou sans tableau cards", () => {
     expect(validateCards("pas du json", SOURCE, 1)).toEqual({ error: "réponse JSON invalide" });
     expect(validateCards("{}", SOURCE, 1)).toEqual({ error: "champ cards manquant" });

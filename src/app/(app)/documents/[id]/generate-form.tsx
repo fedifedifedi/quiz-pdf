@@ -17,11 +17,15 @@ export function GenerateForm({ documentId, hasCards }: { documentId: string; has
   const [step, setStep] = useState<Step | null>(null);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
+  // Nombre de cartes générées : les étapes restent affichées (toutes cochées) après la fin,
+  // pour que chacune soit lisible même quand elle ne dure que quelques millisecondes.
+  const [generated, setGenerated] = useState<number | null>(null);
 
   async function generate(formData: FormData) {
     setRunning(true);
     setError("");
     setStep(null);
+    setGenerated(null);
     try {
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -47,7 +51,7 @@ export function GenerateForm({ documentId, hasCards }: { documentId: string; has
           if ("step" in event) setStep(event.step);
           else if ("error" in event) setError(event.error);
           else {
-            setStep(null);
+            setGenerated(event.done);
             router.refresh();
           }
         }
@@ -60,6 +64,11 @@ export function GenerateForm({ documentId, hasCards }: { documentId: string; has
   }
 
   const current = STEPS.findIndex((s) => s.id === step);
+  const stepState = (i: number) => {
+    if (generated !== null || i < current) return "done";
+    if (i > current) return "pending";
+    return error ? "failed" : "active";
+  };
 
   return (
     <form action={generate} className="rounded-lg bg-white p-6 shadow">
@@ -87,11 +96,10 @@ export function GenerateForm({ documentId, hasCards }: { documentId: string; has
         <p className="mt-2 text-xs text-slate-500">Une nouvelle génération remplace les cartes actuelles.</p>
       )}
 
-      {(running || (error && current >= 0)) && (
+      {(running || generated !== null || (error && current >= 0)) && (
         <ol className="mt-5 space-y-2 text-sm" aria-live="polite">
           {STEPS.map((s, i) => {
-            const state =
-              i < current ? "done" : i === current ? (error ? "failed" : "active") : "pending";
+            const state = stepState(i);
             return (
               <li key={s.id} className="flex items-center gap-2">
                 <span
@@ -111,6 +119,11 @@ export function GenerateForm({ documentId, hasCards }: { documentId: string; has
             );
           })}
         </ol>
+      )}
+      {generated !== null && (
+        <p className="mt-3 text-sm font-medium text-green-700">
+          {generated} cartes générées, extraits vérifiés dans le document.
+        </p>
       )}
       {error && (
         <p role="alert" className="mt-3 text-sm text-red-600">

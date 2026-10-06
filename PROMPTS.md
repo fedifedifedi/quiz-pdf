@@ -17,8 +17,11 @@
 3. Relecture exigeante de chaque PR (sécurité, isolation par `userId`, code mort, complexité),
    publiée en commentaire, correction des bloquants, merge une fois la CI verte.
    Corrections de `validateCards` d'après le texte réel extrait de mon PDF de test.
-   PR 5 (Gemini) : clé jamais affichée ni copiée ; script qui vérifie la clé et liste les modèles
-   en un seul appel ; je choisis moi-même `GEMINI_MODEL` ; mock uniquement dans les tests (budget 5 à 10 €).
+   Génération Gemini (PR #6) : clé jamais affichée ni copiée ; script qui vérifie la clé et liste les
+   modèles en un seul appel ; je choisis moi-même `GEMINI_MODEL` ; mock uniquement dans les tests
+   (budget 5 à 10 €).
+4. Après mon test réel de génération : corrections de la PR #6 avant merge (voir ci-dessous), puis
+   merge de la PR #5. Je reteste avant le merge de la PR #6.
 
 ## Mes tests manuels (navigateur Chrome, `npm run dev`, console F12)
 
@@ -30,6 +33,9 @@ Après les PR 1 à 4, tout est OK :
 - URL d'un document sans session : redirection vers `/login` ;
 - mauvais mot de passe : message clair ;
 - second utilisateur sur l'URL du document du premier : 404, et sa liste est vide.
+
+Génération réelle (PR #6, `gemini-3.5-flash-lite`, `cours-relativite.pdf`, 10 cartes) : 10 cartes
+en 4 s, toutes fidèles au PDF, extraits sources corrects. Trois défauts relevés (voir ci-dessous).
 
 ## Relecture des PR 1 à 4 (commentaires publiés sur chaque PR)
 
@@ -53,3 +59,12 @@ Après les PR 1 à 4, tout est OK :
   aux lettres espacées et des mots coupés en fin de ligne, et demandé de les tolérer, ainsi que de
   demander à Gemini des extraits du corps du texte plutôt que des titres. Résultat : la comparaison se
   fait désormais sans espaces, tirets ni guillemets, avec des tests sur les extraits réels.
+- Double numérotation à l'affichage (« 1. 1. En quelle année… ») : le modèle numérotait lui-même ses
+  questions. Le prompt demande désormais « sans numéro », et le serveur retire un éventuel numéro de
+  tête (« 1. », « 12) », « Carte 3 : ») sans toucher à une année ni à un décimal. Test ajouté.
+- Qualité pédagogique : les cartes venaient surtout du début du document et portaient sur des anecdotes
+  (dates, noms). Le prompt demande maintenant des cartes réparties sur tout le document, centrées sur
+  les notions clés et leurs explications, avec des réponses complètes (le résultat d'une expérience,
+  pas seulement sa méthode). Le prompt reste court et générique (aucun exemple propre à la relativité).
+- Progression trop rapide pour être lue (génération en 4 s) : sans ralentissement artificiel, les étapes
+  restent affichées une fois la génération finie, toutes cochées, avec un message de succès.
